@@ -1,0 +1,24 @@
+# pycharm
+*.xml
+*/.idea/
+.idea/
+*.pyc
+*.png
+
+# dataset
+
+*.csv
+#raw/
+#train/
+#test/
+#video/
+#kalman/
+
+# train logs
+*.logs
+
+# model
+*ckpt*
+checkpoint
+
+
