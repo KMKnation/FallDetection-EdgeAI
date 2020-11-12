@@ -3,6 +3,8 @@ import numpy as np
 import glob
 import random
 
+from tensorflow.python.keras.utils import to_categorical
+
 
 class MobiFallGenerator(object):
     acc_columns = ['timestamp', 'x', 'y', 'z(m/s^2)']
@@ -103,7 +105,7 @@ class MobiFallGenerator(object):
             y = target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size,
                 target_df.columns.get_loc("activity")]
             y = y.apply(lambda row: self.label_to_numeric(row))
-            label_y.append(y.values)
+            label_y.append(to_categorical(y.values))
 
         return np.array(train_x), np.array(label_y)
 
@@ -122,7 +124,7 @@ class MobiFallGenerator(object):
         x = np.array(target_df.iloc[0:10, col_indexes].values)
         y = target_df.iloc[0:10, target_df.columns.get_loc("activity")]
         y = y.apply(lambda row: self.label_to_numeric(row))
-        y = np.array(y.values)
+        y = np.array(to_categorical(y.values))
         return x, y
 
     def on_epoch_begin(self, epoch, logs={}):
@@ -140,5 +142,6 @@ class MobiFallGenerator(object):
 
 
 generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt')
+
 
 print(generator.get_test_data())
