@@ -140,8 +140,20 @@ class MobiFallGenerator(object):
         elif 26 <= epoch < 32:
             self._target_subject_id = '5'
 
+    def get_observations_per_epoch(self):
+        return self._extract_data_size
+
+    def get_features_count(self):
+        return len(self.cols_to_train)
+
+    def get_total_categories(self):
+        return len(self.label_map.keys())
+
 
 generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt')
 
-
 print(generator.get_test_data())
+
+print(generator.get_observations_per_epoch())
+print(generator.get_features_count())
+print(generator.get_total_categories())
