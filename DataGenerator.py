@@ -3,6 +3,7 @@ import numpy as np
 import glob
 import random
 
+
 class MobiFallGenerator(object):
     acc_columns = ['timestamp', 'x', 'y', 'z(m/s^2)']
     ori_columns = ['timestamp', 'Azimuth', 'Pitch', 'Roll']
@@ -27,9 +28,23 @@ class MobiFallGenerator(object):
     def label_to_numeric(self, row):
         return self.label_map[row]
 
-    def __init__(self, dataset_pattern_path, train_for='acc', extract_data_size=30):
+    def feed_csv(self, columns, file, ADL, SUBJECT_ID, TRIAL_NO):
+        df = pd.read_csv(file, skiprows=16, names=columns)
+        df['activity'] = ADL
+        df['subject_id'] = SUBJECT_ID
+        df['trial_id'] = TRIAL_NO.split('.')[0]
+        # train test split based on ratio
+        if self.istrain:
+            df = df.iloc[0:int(df.shape[0] * (1 - self.ratio)) - 1]
+        else:
+            df = df.iloc[(df.shape[0] - int(df.shape[0] * self.ratio) - 1):df.shape[0]]
+        self._all_data = self._all_data.append(df, ignore_index=True, sort=True)
+
+    def __init__(self, dataset_pattern_path, train_for='acc', extract_data_size=30, istrain=False, ratio=0.3):
         self._datafiles = glob.glob(dataset_pattern_path)
         self._extract_data_size = extract_data_size
+        self.istrain = istrain
+        self.ratio = ratio
         self._train_for = train_for
         self._target_subject_id = '1'
 
@@ -53,25 +68,12 @@ class MobiFallGenerator(object):
             if SENSOR_CODE != self._train_for:
                 continue
 
-            columns = None
             if SENSOR_CODE == 'acc' and self._train_for == 'acc':
-                df = pd.read_csv(file, skiprows=16, names=self.acc_columns)
-                df['activity'] = ADL
-                df['subject_id'] = SUBJECT_ID
-                df['trial_id'] = TRIAL_NO.split('.')[0]
-                self._all_data = self._all_data.append(df, ignore_index=True, sort=True)
+                self.feed_csv(self.acc_columns, file, ADL, SUBJECT_ID, TRIAL_NO)
             elif SENSOR_CODE == 'ori' and self._train_for == 'ori':
-                df = pd.read_csv(file, skiprows=16, names=self.ori_columns)
-                df['activity'] = ADL
-                df['subject_id'] = SUBJECT_ID
-                df['trial_id'] = TRIAL_NO.split('.')[0]
-                self._all_data = self._all_data.append(df, ignore_index=True, sort=True)
+                self.feed_csv(self.ori_columns, file, ADL, SUBJECT_ID, TRIAL_NO)
             elif SENSOR_CODE == 'gyro' and self._train_for == 'gyro':
-                df = pd.read_csv(file, skiprows=16, names=self.gyro_columns)
-                df['activity'] = ADL
-                df['trial_id'] = TRIAL_NO.split('.')[0]
-                df['subject_id'] = SUBJECT_ID
-                self._all_data = self._all_data.append(df, ignore_index=True, sort=True)
+                self.feed_csv(self.gyro_columns, file, ADL, SUBJECT_ID, TRIAL_NO)
 
     def get_data_files(self):
         return self._datafiles
@@ -98,7 +100,8 @@ class MobiFallGenerator(object):
 
         for i in range(batchsize):
             train_x.append(target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size, col_indexes].values)
-            y = target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size, target_df.columns.get_loc("activity")]
+            y = target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size,
+                target_df.columns.get_loc("activity")]
             y = y.apply(lambda row: self.label_to_numeric(row))
             label_y.append(y.values)
 
@@ -134,6 +137,7 @@ class MobiFallGenerator(object):
             self._target_subject_id = '4'
         elif 26 <= epoch < 32:
             self._target_subject_id = '5'
+
 
 generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt')
 
