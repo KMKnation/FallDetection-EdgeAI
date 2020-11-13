@@ -80,7 +80,7 @@ class MobiFallGenerator(object):
     def get_data_files(self):
         return self._datafiles
 
-    def get_batch(self, batchsize, start_list=None):
+    def get_batch(self, batchsize=1, start_list=None):
 
         target_df = self._all_data[(self._all_data['subject_id'] == self._target_subject_id)].sort_values(
             by=['activity', 'subject_id', 'trial_id', 'timestamp'], ascending=[True, True, True, True])
@@ -105,9 +105,9 @@ class MobiFallGenerator(object):
             y = target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size,
                 target_df.columns.get_loc("activity")]
             y = y.apply(lambda row: self.label_to_numeric(row))
-            label_y.append(to_categorical(y.values))
+            label_y.append(y.values)
 
-        return np.array(train_x), np.array(label_y)
+        return np.array(train_x), to_categorical(label_y,  num_classes=self.get_total_categories())
 
     def get_test_data(self):
         """
@@ -124,8 +124,8 @@ class MobiFallGenerator(object):
         x = np.array(target_df.iloc[0:10, col_indexes].values)
         y = target_df.iloc[0:10, target_df.columns.get_loc("activity")]
         y = y.apply(lambda row: self.label_to_numeric(row))
-        y = np.array(to_categorical(y.values))
-        return x, y
+        y = np.array(y.values)
+        return x, to_categorical(y)
 
     def on_epoch_begin(self, epoch, logs={}):
         # pass all the subjects one by with all the activities one by one
@@ -150,10 +150,11 @@ class MobiFallGenerator(object):
         return len(self.label_map.keys())
 
 
+#
 generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt')
-
-print(generator.get_test_data())
-
-print(generator.get_observations_per_epoch())
-print(generator.get_features_count())
-print(generator.get_total_categories())
+_, y =generator.get_batch(30)
+print(y.shape)
+#
+# print(generator.get_observations_per_epoch())
+# print(generator.get_features_count())
+# print(generator.get_total_categories())
