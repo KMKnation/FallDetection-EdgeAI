@@ -12,5 +12,7 @@ class MobiFallNet(object):
         self.model.add(Dense(n_outputs, activation='softmax'))
         self.model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
+
     def get_model(self):
+        print(self.model.summary())
         return self.model

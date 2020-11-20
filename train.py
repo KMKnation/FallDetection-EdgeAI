@@ -3,24 +3,28 @@ from tensorflow.python.keras.callbacks import ModelCheckpoint
 from model import MobiFallNet
 from DataGenerator import MobiFallGenerator
 
+batchsize = 10
+n_timestamps = 30
 generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt',
                               train_for='acc',
-                              extract_data_size=30,
+                              extract_data_size=n_timestamps,
                               istrain=True,
                               ratio=0.3)
 
 validation_generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt',
                                          train_for='acc',
-                                         extract_data_size=30,
+                                         extract_data_size=n_timestamps,
                                          istrain=False,
                                          ratio=0.3)
 
-n_observations = generator.get_observations_per_epoch()
 n_features = generator.get_features_count()
 n_category = generator.get_total_categories()
 
-input_shape = (n_observations, n_features)
+input_shape = (n_timestamps, n_features)
+print("INPUT SHAPE =>{}".format(str(input_shape)))
 model = MobiFallNet(input_shape=input_shape, n_outputs=n_category).get_model()
+
+print(model.summary())
 
 # train the network
 steps_per_epoch = 10

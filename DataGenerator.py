@@ -80,7 +80,48 @@ class MobiFallGenerator(object):
     def get_data_files(self):
         return self._datafiles
 
+    # def get_batch(self, batchsize=1, start_list=None):
+    #     '''
+    #         LSTM (and GRU) layers require 3 dimensional inputs:
+    #         a batch size, a number of time steps, and a number of features.
+    #     :param batchsize:
+    #     :param start_list:
+    #     :return:
+    #     '''
+    #
+    #     target_df = self._all_data[(self._all_data['subject_id'] == self._target_subject_id)].sort_values(
+    #         by=['activity', 'subject_id', 'trial_id', 'timestamp'], ascending=[True, True, True, True])
+    #     data_size = target_df.shape[0]
+    #
+    #     if start_list is None:
+    #         start_pos = [random.randint(1, data_size - self._extract_data_size) for _ in range(data_size)]
+    #     else:
+    #         if len(start_list) != batchsize:
+    #             print('batchisze = ', batchsize)
+    #             print('start_list length = ', len(start_list))
+    #             raise KeyError('batchsize is no equal to start_list length!')
+    #         start_pos = start_list
+    #
+    #     col_indexes = [target_df.columns.get_loc(column) for column in self.cols_to_train]
+    #     col_indexes.sort()
+    #
+    #     i = 0
+    #     y = target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size,
+    #         target_df.columns.get_loc("activity")]
+    #     y = y.apply(lambda row: self.label_to_numeric(row))
+    #
+    #     yield target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size, col_indexes].values, y.values
+
+
     def get_batch(self, batchsize=1, start_list=None):
+        '''
+            LSTM (and GRU) layers require 3 dimensional inputs:
+            a batch size, a number of time steps, and a number of features.
+        :param batchsize:
+        :param start_list:
+        :return:
+        '''
+
 
         target_df = self._all_data[(self._all_data['subject_id'] == self._target_subject_id)].sort_values(
             by=['activity', 'subject_id', 'trial_id', 'timestamp'], ascending=[True, True, True, True])
@@ -107,7 +148,7 @@ class MobiFallGenerator(object):
             y = y.apply(lambda row: self.label_to_numeric(row))
             label_y.append(y.values)
 
-        return np.array(train_x), to_categorical(label_y,  num_classes=self.get_total_categories())
+        yield np.array(train_x), to_categorical(label_y,  num_classes=self.get_total_categories())
 
     def get_test_data(self):
         """
@@ -149,12 +190,13 @@ class MobiFallGenerator(object):
     def get_total_categories(self):
         return len(self.label_map.keys())
 
-
 #
-generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt')
-_, y =generator.get_batch(30)
-print(y.shape)
-#
+# generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt', istrain=False)
+# x, y =generator.get_batch(10)
+# print(y.shape)
+# print(x.shape)
+# #
+# print(generator.get_test_data())
 # print(generator.get_observations_per_epoch())
 # print(generator.get_features_count())
 # print(generator.get_total_categories())

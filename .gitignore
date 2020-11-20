@@ -21,4 +21,5 @@
 *ckpt*
 checkpoint
 
-
+.ipynb_checkpoints/
+venv/
