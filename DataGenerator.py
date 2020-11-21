@@ -27,21 +27,6 @@ class MobiFallGenerator(object):
         'SDL': 12
     }
 
-    def label_to_numeric(self, row):
-        return self.label_map[row]
-
-    def feed_csv(self, columns, file, ADL, SUBJECT_ID, TRIAL_NO):
-        df = pd.read_csv(file, skiprows=16, names=columns, nrows=30)
-        df['activity'] = ADL
-        df['subject_id'] = SUBJECT_ID
-        df['trial_id'] = TRIAL_NO.split('.')[0]
-        # train test split based on ratio
-        if self.istrain:
-            df = df.iloc[0:int(df.shape[0] * (1 - self.ratio)) - 1]
-        else:
-            df = df.iloc[(df.shape[0] - int(df.shape[0] * self.ratio) - 1):df.shape[0]]
-        self._all_data = self._all_data.append(df, ignore_index=True, sort=True)
-
     def __init__(self, dataset_pattern_path, train_for='acc', extract_data_size=1, istrain=False, ratio=0.3):
         self._datafiles = glob.glob(dataset_pattern_path)
         self._extract_data_size = extract_data_size
@@ -76,6 +61,21 @@ class MobiFallGenerator(object):
                 self.feed_csv(self.ori_columns, file, ADL, SUBJECT_ID, TRIAL_NO)
             elif SENSOR_CODE == 'gyro' and self._train_for == 'gyro':
                 self.feed_csv(self.gyro_columns, file, ADL, SUBJECT_ID, TRIAL_NO)
+
+    def label_to_numeric(self, row):
+        return self.label_map[row]
+
+    def feed_csv(self, columns, file, ADL, SUBJECT_ID, TRIAL_NO):
+        df = pd.read_csv(file, skiprows=16, names=columns, nrows=120)
+        df['activity'] = ADL
+        df['subject_id'] = SUBJECT_ID
+        df['trial_id'] = TRIAL_NO.split('.')[0]
+        # train test split based on ratio
+        if self.istrain:
+            df = df.iloc[0:int(df.shape[0] * (1 - self.ratio)) - 1]
+        else:
+            df = df.iloc[(df.shape[0] - int(df.shape[0] * self.ratio) - 1):df.shape[0]]
+        self._all_data = self._all_data.append(df, ignore_index=True, sort=True)
 
     def get_data_files(self):
         return self._datafiles
@@ -120,9 +120,62 @@ class MobiFallGenerator(object):
         '''
 
         while True:
-            x_train = np.random.random((batchsize, self._extract_data_size, self.get_features_count()))
-            y_train = np.random.random((batchsize, self.get_total_categories()))
-            yield x_train, y_train
+
+            # keep in mind that whatever timestamps you pass in one bundle of x
+            # the target label for that timestamps should be same
+
+            # there is 500 timestasmps minumum for each activity
+
+            target_df = self._all_data[(self._all_data['subject_id'] == self._target_subject_id)].sort_values(
+                by=['activity', 'subject_id', 'trial_id', 'timestamp'], ascending=[True, True, True, True])
+            # choose random activity of that subject
+            activities = target_df['activity'].unique()
+            target_activity = activities[random.randint(0, len(activities) - 1)]
+            target_df = target_df[target_df['activity'] == target_activity]
+
+            # print(target_df.head())
+            data_size = target_df.shape[0]
+            # print(data_size)
+
+            if self._extract_data_size > data_size:
+                raise Exception("Not enough data")
+
+            if start_list is None:
+                start_pos = [random.randint(1, data_size - self._extract_data_size) for _ in range(data_size)]
+            else:
+                if len(start_list) != batchsize:
+                    print('batchisze = ', batchsize)
+                    print('start_list length = ', len(start_list))
+                    raise KeyError('batchsize is no equal to start_list length!')
+                start_pos = start_list
+
+            train_x = []
+            train_y = []
+            col_indexes = [target_df.columns.get_loc(column) for column in self.cols_to_train]
+            col_indexes.sort()
+
+            if data_size < batchsize:
+                print(np.array(train_x).shape)
+                print(np.array(train_y).shape)
+
+                '''
+                correct shape
+                '''
+                x_train = np.random.random((batchsize, self._extract_data_size, self.get_features_count()))
+                y_train = np.random.random((batchsize, self.get_total_categories()))
+
+                print(x_train.shape)
+                print(y_train.shape)
+                raise Exception("Batch size is so high then the acctual data size")
+
+            for i in range(batchsize):
+                train_x.append(target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size, col_indexes].values)
+                train_y.append(
+                    to_categorical(self.label_to_numeric(target_activity), num_classes=self.get_total_categories()))
+
+            # yield x_train, y_train
+
+            yield np.array(train_x), np.array(train_y)
 
     def get_batch_old(self, batchsize=1, start_list=None):
         '''

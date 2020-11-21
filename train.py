@@ -27,7 +27,7 @@ print(model.summary())
 
 # train the network
 steps_per_epoch = 10
-epochs = 100
+epochs = 12
 batchsize = steps_per_epoch * epochs
 
 
