@@ -31,7 +31,7 @@ class MobiFallGenerator(object):
         return self.label_map[row]
 
     def feed_csv(self, columns, file, ADL, SUBJECT_ID, TRIAL_NO):
-        df = pd.read_csv(file, skiprows=16, names=columns)
+        df = pd.read_csv(file, skiprows=16, names=columns, nrows=30)
         df['activity'] = ADL
         df['subject_id'] = SUBJECT_ID
         df['trial_id'] = TRIAL_NO.split('.')[0]
@@ -42,7 +42,7 @@ class MobiFallGenerator(object):
             df = df.iloc[(df.shape[0] - int(df.shape[0] * self.ratio) - 1):df.shape[0]]
         self._all_data = self._all_data.append(df, ignore_index=True, sort=True)
 
-    def __init__(self, dataset_pattern_path, train_for='acc', extract_data_size=30, istrain=False, ratio=0.3):
+    def __init__(self, dataset_pattern_path, train_for='acc', extract_data_size=1, istrain=False, ratio=0.3):
         self._datafiles = glob.glob(dataset_pattern_path)
         self._extract_data_size = extract_data_size
         self.istrain = istrain
@@ -80,6 +80,7 @@ class MobiFallGenerator(object):
     def get_data_files(self):
         return self._datafiles
 
+    #
     # def get_batch(self, batchsize=1, start_list=None):
     #     '''
     #         LSTM (and GRU) layers require 3 dimensional inputs:
@@ -112,8 +113,18 @@ class MobiFallGenerator(object):
     #
     #     yield target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size, col_indexes].values, y.values
 
-
     def get_batch(self, batchsize=1, start_list=None):
+        '''
+            LSTM (and GRU) layers require 3 dimensional inputs:
+            a batch size, a number of time steps, and a number of features.
+        '''
+
+        while True:
+            x_train = np.random.random((batchsize, self._extract_data_size, self.get_features_count()))
+            y_train = np.random.random((batchsize, self.get_total_categories()))
+            yield x_train, y_train
+
+    def get_batch_old(self, batchsize=1, start_list=None):
         '''
             LSTM (and GRU) layers require 3 dimensional inputs:
             a batch size, a number of time steps, and a number of features.
@@ -121,7 +132,6 @@ class MobiFallGenerator(object):
         :param start_list:
         :return:
         '''
-
 
         target_df = self._all_data[(self._all_data['subject_id'] == self._target_subject_id)].sort_values(
             by=['activity', 'subject_id', 'trial_id', 'timestamp'], ascending=[True, True, True, True])
@@ -146,9 +156,10 @@ class MobiFallGenerator(object):
             y = target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size,
                 target_df.columns.get_loc("activity")]
             y = y.apply(lambda row: self.label_to_numeric(row))
-            label_y.append(y.values)
 
-        yield np.array(train_x), to_categorical(label_y,  num_classes=self.get_total_categories())
+            label_y.append(to_categorical(y.iloc[0], num_classes=self.get_total_categories()))
+
+        return np.array(train_x), np.array(label_y)
 
     def get_test_data(self):
         """
@@ -172,7 +183,8 @@ class MobiFallGenerator(object):
         # pass all the subjects one by with all the activities one by one
         if epoch < 8:
             self._target_subject_id = '1'
-        elif 8 <= epoch < 14:
+        elif 8 \
+                <= epoch < 14:
             self._target_subject_id = '2'
         elif 14 <= epoch < 20:
             self._target_subject_id = '3'
@@ -190,13 +202,15 @@ class MobiFallGenerator(object):
     def get_total_categories(self):
         return len(self.label_map.keys())
 
-#
 # generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt', istrain=False)
-# x, y =generator.get_batch(10)
-# print(y.shape)
+# x, y = generator.get_batch(100 * 10)
 # print(x.shape)
-# #
-# print(generator.get_test_data())
-# print(generator.get_observations_per_epoch())
-# print(generator.get_features_count())
-# print(generator.get_total_categories())
+#
+# print(y.shape)
+
+#
+# # #
+# # print(generator.get_test_data())
+# # print(generator.get_observations_per_epoch())
+# # print(generator.get_features_count())
+# # print(generator.get_total_categories())

@@ -1,5 +1,5 @@
 from tensorflow.python.keras import Sequential
-from tensorflow.python.keras.layers import LSTM, Dropout, Dense
+from tensorflow.python.keras.layers import LSTM, Dropout, Dense, Flatten
 
 
 class MobiFallNet(object):
