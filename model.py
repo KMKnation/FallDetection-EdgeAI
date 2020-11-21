@@ -1,5 +1,6 @@
 from tensorflow.python.keras import Sequential
 from tensorflow.python.keras.layers import LSTM, Dropout, Dense, Flatten
+from tensorflow.python.keras.optimizers import SGD
 
 
 class MobiFallNet(object):
@@ -10,8 +11,8 @@ class MobiFallNet(object):
         self.model.add(Dropout(0.5))
         self.model.add(Dense(100, activation='relu'))
         self.model.add(Dense(n_outputs, activation='softmax'))
-        self.model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-
+        optimizer = SGD(lr=0.01, nesterov=True)
+        self.model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
     def get_model(self):
         print(self.model.summary())

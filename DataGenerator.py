@@ -66,7 +66,7 @@ class MobiFallGenerator(object):
         return self.label_map[row]
 
     def feed_csv(self, columns, file, ADL, SUBJECT_ID, TRIAL_NO):
-        df = pd.read_csv(file, skiprows=16, names=columns, nrows=120)
+        df = pd.read_csv(file, skiprows=16, names=columns)
         df['activity'] = ADL
         df['subject_id'] = SUBJECT_ID
         df['trial_id'] = TRIAL_NO.split('.')[0]
@@ -113,6 +113,44 @@ class MobiFallGenerator(object):
     #
     #     yield target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size, col_indexes].values, y.values
 
+    def prepare_data(self, activities, main_df, batchsize):
+        target_activity = activities[random.randint(0, len(activities) - 1)]
+        target_df = main_df[main_df['activity'] == target_activity]
+
+        # print(target_df.head())
+        data_size = target_df.shape[0]
+        # print(data_size)
+
+        if self._extract_data_size > data_size:
+            raise Exception("Not enough data")
+
+        start_pos = [random.randint(1, data_size - self._extract_data_size) for _ in range(data_size)]
+
+        train_x = []
+        train_y = []
+        col_indexes = [target_df.columns.get_loc(column) for column in self.cols_to_train]
+        col_indexes.sort()
+
+        for i in range(batchsize):
+            if len(train_y) == batchsize:
+                break
+
+            if i == data_size:
+                break
+
+            train_x.append(target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size, col_indexes].values)
+            train_y.append(
+                    to_categorical(self.label_to_numeric(target_activity), num_classes=self.get_total_categories()))
+
+        if len(train_y) < batchsize:
+            print('some how less data for one activity for generating more for same subject')
+            x, y = self.prepare_data(activities, main_df, batchsize - len(train_y))
+            for i in range(len(x)):
+                train_x.append(x[i])
+                train_y.append(y[i])
+
+        return train_x, train_y
+
     def get_batch(self, batchsize=1, start_list=None):
         '''
             LSTM (and GRU) layers require 3 dimensional inputs:
@@ -128,35 +166,10 @@ class MobiFallGenerator(object):
 
             target_df = self._all_data[(self._all_data['subject_id'] == self._target_subject_id)].sort_values(
                 by=['activity', 'subject_id', 'trial_id', 'timestamp'], ascending=[True, True, True, True])
-            # choose random activity of that subject
-            activities = target_df['activity'].unique()
-            target_activity = activities[random.randint(0, len(activities) - 1)]
-            target_df = target_df[target_df['activity'] == target_activity]
 
-            # print(target_df.head())
-            data_size = target_df.shape[0]
-            # print(data_size)
+            total_size = target_df.shape[0]
 
-            if self._extract_data_size > data_size:
-                raise Exception("Not enough data")
-
-            if start_list is None:
-                start_pos = [random.randint(1, data_size - self._extract_data_size) for _ in range(data_size)]
-            else:
-                if len(start_list) != batchsize:
-                    print('batchisze = ', batchsize)
-                    print('start_list length = ', len(start_list))
-                    raise KeyError('batchsize is no equal to start_list length!')
-                start_pos = start_list
-
-            train_x = []
-            train_y = []
-            col_indexes = [target_df.columns.get_loc(column) for column in self.cols_to_train]
-            col_indexes.sort()
-
-            if data_size < batchsize:
-                print(np.array(train_x).shape)
-                print(np.array(train_y).shape)
+            if total_size < batchsize:
 
                 '''
                 correct shape
@@ -166,14 +179,14 @@ class MobiFallGenerator(object):
 
                 print(x_train.shape)
                 print(y_train.shape)
+                print("Total Size {}".format(total_size))
                 raise Exception("Batch size is so high then the acctual data size")
 
-            for i in range(batchsize):
-                train_x.append(target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size, col_indexes].values)
-                train_y.append(
-                    to_categorical(self.label_to_numeric(target_activity), num_classes=self.get_total_categories()))
+            # choose random activity of that subject
+            activities = target_df['activity'].unique()
 
-            # yield x_train, y_train
+            train_x, train_y = self.prepare_data(activities, target_df, batchsize)
+
 
             yield np.array(train_x), np.array(train_y)
 
@@ -234,17 +247,18 @@ class MobiFallGenerator(object):
 
     def on_epoch_begin(self, epoch, logs={}):
         # pass all the subjects one by with all the activities one by one
-        if epoch < 8:
-            self._target_subject_id = '1'
-        elif 8 \
-                <= epoch < 14:
-            self._target_subject_id = '2'
-        elif 14 <= epoch < 20:
-            self._target_subject_id = '3'
-        elif 20 <= epoch < 26:
-            self._target_subject_id = '4'
-        elif 26 <= epoch < 32:
-            self._target_subject_id = '5'
+        print(epoch)
+        # if epoch < 8:
+        #     self._target_subject_id = '1'
+        # elif 8 \
+        #         <= epoch < 14:
+        #     self._target_subject_id = '2'
+        # elif 14 <= epoch < 20:
+        #     self._target_subject_id = '3'
+        # elif 20 <= epoch < 26:
+        #     self._target_subject_id = '4'
+        # elif 26 <= epoch < 32:
+        #     self._target_subject_id = '5'
 
     def get_observations_per_epoch(self):
         return self._extract_data_size
