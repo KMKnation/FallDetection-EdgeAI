@@ -7,12 +7,10 @@
 
 # dataset
 
-*.csv
-#raw/
-#train/
-#test/
-#video/
-#kalman/
+*./dataset/*.txt
+./dataset
+./dataset/MobiFall_Dataset_v2.0.rar
+./dataset/MobiFall_Dataset_v2/
 
 # train logs
 *.logs
@@ -20,6 +18,8 @@
 # model
 *ckpt*
 checkpoint
+*.hdf5
+./model/*.hd5f
 
 .ipynb_checkpoints/
 venv/

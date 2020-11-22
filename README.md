@@ -1,1 +1,1 @@
-# FallDetection-EdgeAI
+# Fall Detection using RNN
