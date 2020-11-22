@@ -3,7 +3,8 @@
 */.idea/
 .idea/
 *.pyc
-*.png
+*.txt
+*.rar
 
 # dataset
 
@@ -13,7 +14,6 @@
 ./dataset/MobiFall_Dataset_v2/
 
 # train logs
-*.logs
 
 # model
 *ckpt*

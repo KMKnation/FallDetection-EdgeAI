@@ -79,3 +79,5 @@ plt.legend()
 plt.savefig(os.path.join(os.path.join(ROOT_DIRECTORY, 'train_logs'), 'loss.png'))
 
 plt.clf()
+
+exit(0)
