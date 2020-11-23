@@ -3,8 +3,8 @@ import numpy as np
 import glob
 import random
 
-from tensorflow.python import keras
-from tensorflow.python.keras.utils import to_categorical
+from tensorflow import keras
+from tensorflow.python.keras.utils.np_utils import to_categorical
 
 
 class MobiFallGenerator(keras.callbacks.Callback):
@@ -201,7 +201,7 @@ class MobiFallGenerator(keras.callbacks.Callback):
 
     def on_epoch_begin(self, epoch, logs={}):
         # pass all the subjects one by with all the activities one by one
-        print(logs)
+
         if epoch < 8:
             self._target_subject_id = '1'
         elif 8 <= epoch < 14:
@@ -235,6 +235,8 @@ class MobiFallGenerator(keras.callbacks.Callback):
         elif epoch >= 98:
             self._target_subject_id = str(random.randint(1,31))
 
+        # print("WE ARE TRAINING FOR SUBJECT ID = {}".format(self._target_subject_id))
+
     def get_observations_per_epoch(self):
         return self._extract_data_size
 
@@ -245,15 +247,15 @@ class MobiFallGenerator(keras.callbacks.Callback):
     def get_total_categories(self):
         return len(self.label_map.keys())
 
-# generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt', istrain=False)
-# x, y = generator.get_batch(100 * 10)
-# print(x.shape)
-#
-# print(y.shape)
 
-#
-# # #
-# # print(generator.get_test_data())
-# # print(generator.get_observations_per_epoch())
-# # print(generator.get_features_count())
-# # print(generator.get_total_categories())
+if __name__ == '__main__':
+    generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt', istrain=False)
+    x, y = generator.get_batch(100 * 10)
+    print(x.shape)
+
+    print(y.shape)
+
+    print(generator.get_test_data())
+    print(generator.get_observations_per_epoch())
+    print(generator.get_features_count())
+    print(generator.get_total_categories())

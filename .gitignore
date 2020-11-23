@@ -3,7 +3,7 @@
 */.idea/
 .idea/
 *.pyc
-*.txt
+*./dataset/.txt
 *.rar
 
 # dataset

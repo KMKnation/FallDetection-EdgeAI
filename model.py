@@ -1,6 +1,6 @@
-from tensorflow.python.keras import Sequential
-from tensorflow.python.keras.layers import LSTM, Dropout, Dense, Flatten
-from tensorflow.python.keras.optimizers import SGD
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import LSTM, Dropout, Dense
+from tensorflow.keras.optimizers import SGD
 
 
 class MobiFallNet(object):
