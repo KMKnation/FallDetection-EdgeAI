@@ -1,4 +1,4 @@
-from tensorflow.python.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import ModelCheckpoint
 from model import MobiFallNet
 from DataGenerator import MobiFallGenerator
 import matplotlib.pyplot as plt
@@ -6,22 +6,24 @@ import os
 
 ROOT_DIRECTORY = os.getcwd()
 
+SENSOR_TO_TRAIN = ['acc', 'ori', 'gyro']
+
 n_timestamps = 10
 
 # train the network
 steps_per_epoch = 20
-epochs = 50
+epochs = 2
 batchsize = steps_per_epoch * epochs
 
 generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt',
-                              train_for='acc',
+                              train_for=SENSOR_TO_TRAIN[0],
                               batch_size=batchsize,
                               extract_data_size=n_timestamps,
                               istrain=True,
                               ratio=0.3)
 
 validation_generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt',
-                                         train_for='acc',
+                                         train_for=SENSOR_TO_TRAIN[0],
                                          batch_size=batchsize,
                                          extract_data_size=n_timestamps,
                                          istrain=False,
@@ -34,11 +36,11 @@ input_shape = (n_timestamps, n_features)
 print("INPUT SHAPE =>{}".format(str(input_shape)))
 model = MobiFallNet(input_shape=input_shape, n_outputs=n_category).get_model()
 
-print(model.summary())
-
 callbacks_list = [
     ModelCheckpoint(os.path.join('model', 'weights.hdf5'), monitor='loss', verbose=1, save_best_only=True, mode='auto',
-                    save_weights_only='True')]
+                    save_weights_only='True'),
+    generator,
+    validation_generator]
 
 history = model.fit_generator(generator.next_train(),
                               steps_per_epoch=steps_per_epoch,
@@ -54,8 +56,8 @@ history = model.fit_generator(generator.next_train(),
                               shuffle=False,
                               initial_epoch=0)
 
-acc = history.history['acc']
-val_acc = history.history['val_acc']
+acc = history.history['accuracy']
+val_acc = history.history['val_accuracy']
 loss = history.history['loss']
 val_loss = history.history['val_loss']
 
