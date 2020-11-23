@@ -2,13 +2,12 @@ import pandas as pd
 import numpy as np
 import glob
 import random
-
+import gc
 from tensorflow import keras
 from tensorflow.python.keras.utils.np_utils import to_categorical
 
 
 class MobiFallGenerator(keras.callbacks.Callback):
-
     acc_columns = ['timestamp', 'x', 'y', 'z(m/s^2)']
     ori_columns = ['timestamp', 'Azimuth', 'Pitch', 'Roll']
     gyro_columns = ['timestamp', 'g_x', 'g_y', 'z(rad/s)']
@@ -29,8 +28,13 @@ class MobiFallGenerator(keras.callbacks.Callback):
         'SDL': 12
     }
 
+    subjects = [i for i in range(1, 22)]
+    subjects.append(29)
+    subjects.append(30)
+    subjects.append(31)
+
     def __init__(self, dataset_pattern_path, train_for='acc',
-                 batch_size = 64, #steps_per_epoch * epochs
+                 batch_size=64,  # steps_per_epoch * epochs
                  extract_data_size=1,
                  istrain=False,
                  ratio=0.3):
@@ -77,11 +81,7 @@ class MobiFallGenerator(keras.callbacks.Callback):
         df['activity'] = ADL
         df['subject_id'] = SUBJECT_ID
         df['trial_id'] = TRIAL_NO.split('.')[0]
-        # train test split based on ratio
-        if self.istrain:
-            df = df.iloc[0:int(df.shape[0] * (1 - self.ratio)) - 1]
-        else:
-            df = df.iloc[(df.shape[0] - int(df.shape[0] * self.ratio) - 1):df.shape[0]]
+
         self._all_data = self._all_data.append(df, ignore_index=True, sort=True)
 
     def get_data_files(self):
@@ -116,7 +116,11 @@ class MobiFallGenerator(keras.callbacks.Callback):
             train_y.append(
                 to_categorical(self.label_to_numeric(target_activity), num_classes=self.get_total_categories()))
 
-        if len(train_y) < batchsize:
+        while len(train_y) < batchsize:
+
+            if len(train_y) == batchsize:
+                break
+
             # print('some how less data for one activity for generating more for same subject')
             x, y = self.prepare_data(activities, main_df, batchsize - len(train_y))
             for i in range(len(x)):
@@ -125,12 +129,11 @@ class MobiFallGenerator(keras.callbacks.Callback):
 
         return train_x, train_y
 
-    def get_batch(self, batchsize=1):
+    def get_batch(self, batchsize=1, isTrain=True):
         '''
             LSTM (and GRU) layers require 3 dimensional inputs:
             a batch size, a number of time steps, and a number of features.
         '''
-
 
         # keep in mind that whatever timestamps you pass in one bundle of x
         # the target label for that timestamps should be same
@@ -138,7 +141,14 @@ class MobiFallGenerator(keras.callbacks.Callback):
         # there is 500 timestasmps minumum for each activity
 
         target_df = self._all_data[(self._all_data['subject_id'] == self._target_subject_id)].sort_values(
-                by=['activity', 'subject_id', 'trial_id', 'timestamp'], ascending=[True, True, True, True])
+            by=['activity', 'subject_id', 'trial_id', 'timestamp'], ascending=[True, True, True, True])
+
+        # train test split based on ratio
+        if isTrain:
+            target_df = target_df.iloc[0:int(target_df.shape[0] * (1 - self.ratio)) - 1]
+        else:
+            target_df = target_df.iloc[
+                        (target_df.shape[0] - int(target_df.shape[0] * self.ratio) - 1):target_df.shape[0]]
 
         # removing timestamps after ordering
         target_df = target_df.drop(['timestamp'], axis=1)
@@ -149,37 +159,35 @@ class MobiFallGenerator(keras.callbacks.Callback):
         # print(self.cols_to_train)
         # exit(0)
 
-        total_size = target_df.shape[0]
+        # total_size = target_df.shape[0]
 
-        if total_size < batchsize:
-            '''
-            correct shape
-            '''
-            x_train = np.random.random((batchsize, self._extract_data_size, self.get_features_count()))
-            y_train = np.random.random((batchsize, self.get_total_categories()))
-
-            print(x_train.shape)
-            print(y_train.shape)
-            print("Total Size {}".format(total_size))
-            raise Exception("Batch size is so high then the acctual data size")
+        # if total_size < batchsize:
+        #     '''
+        #     correct shape
+        #     '''
+        #     x_train = np.random.random((batchsize, self._extract_data_size, self.get_features_count()))
+        #     y_train = np.random.random((batchsize, self.get_total_categories()))
+        #
+        #     print(x_train.shape)
+        #     print(y_train.shape)
+        #     print("Total Size {}".format(total_size))
+        #     raise Exception("Batch size is so high then the acctual data size")
 
         # choose random activity of that subject
         activities = target_df['activity'].unique()
 
         train_x, train_y = self.prepare_data(activities, target_df, batchsize)
-
         return (np.array(train_x), np.array(train_y))
 
     def next_train(self):
         while 1:
-            ret = self.get_batch(self.batch_size)
+            ret = self.get_batch(self.batch_size, True)
             yield ret
 
     def next_val(self):
         while 1:
-            ret = self.get_batch(self.batch_size)
+            ret = self.get_batch(self.batch_size, False)
             yield ret
-
 
     def get_test_data(self):
         """
@@ -201,47 +209,48 @@ class MobiFallGenerator(keras.callbacks.Callback):
 
     def on_epoch_begin(self, epoch, logs={}):
         # pass all the subjects one by with all the activities one by one
-
-        if epoch < 8:
-            self._target_subject_id = '1'
-        elif 8 <= epoch < 14:
+        if epoch < 5:
             self._target_subject_id = '2'
-        elif 14 <= epoch < 20:
+        elif 5 <= epoch < 10:
+            self._target_subject_id = '1'
+        elif 10 <= epoch < 15:
             self._target_subject_id = '3'
-        elif 20 <= epoch < 26:
+        elif 15 <= epoch < 20:
             self._target_subject_id = '4'
-        elif 26 <= epoch < 32:
+        elif 20 <= epoch < 25:
             self._target_subject_id = '5'
-        elif 32 <= epoch < 38:
+        elif 25 <= epoch < 35:
             self._target_subject_id = '6'
-        elif 38 <= epoch < 44:
+        elif 35 <= epoch < 40:
             self._target_subject_id = '7'
-        elif 44 <= epoch < 50:
-            self._target_subject_id = '8'
-        elif 50 <= epoch < 56:
+        elif 40 <= epoch < 42:
+            self._target_subject_id = '7'
+        elif 42 <= epoch < 45:
             self._target_subject_id = '9'
-        elif 56 <= epoch < 62:
+        elif 45 <= epoch < 47:
             self._target_subject_id = '10'
-        elif 62 <= epoch < 68:
+        elif 47 <= epoch < 50:
             self._target_subject_id = '11'
-        elif 68 <= epoch < 74:
+        elif 50 <= epoch < 52:
             self._target_subject_id = '12'
-        elif 74 <= epoch < 80:
+        elif 52 <= epoch < 54:
             self._target_subject_id = '13'
-        elif 80 <= epoch < 86:
+        elif 54 <= epoch < 60:
             self._target_subject_id = '14'
-        elif 92 <= epoch < 98:
+        elif 60 <= epoch < 62:
             self._target_subject_id = '15'
-        elif epoch >= 98:
-            self._target_subject_id = str(random.randint(1,31))
+        elif 62 <= epoch < 64:
+            self._target_subject_id = '16'
+        elif epoch >= 64:
+            self._target_subject_id = str(self.subjects[random.randint(0, len(self.subjects) - 1)])
 
-        # print("WE ARE TRAINING FOR SUBJECT ID = {}".format(self._target_subject_id))
+        print("WE ARE TRAINING FOR SUBJECT ID = {}".format(self._target_subject_id))
 
     def get_observations_per_epoch(self):
         return self._extract_data_size
 
     def get_features_count(self):
-        #removing timestamp columns
+        # removing timestamp columns
         return len(self.cols_to_train) - 1
 
     def get_total_categories(self):
