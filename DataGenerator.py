@@ -189,23 +189,31 @@ class MobiFallGenerator(keras.callbacks.Callback):
             ret = self.get_batch(self.batch_size, False)
             yield ret
 
-    def get_test_data(self):
+    def get_test_data(self, subject_id = None):
         """
         x shape = [datasize, 3]
         y shape = [data-size ,1]
         :return:
         """
 
-        target_df = self._all_data[(self._all_data['subject_id'] == self._target_subject_id)].sort_values(
-            by=self.common_cols, ascending=[True, True, True, True])
+        if subject_id == None:
+            target_df = self._all_data[(self._all_data['subject_id'] == self._target_subject_id)].sort_values(
+                by='timestamp', ascending=True)
+        else:
+            target_df = self._all_data[(self._all_data['subject_id'] == str(subject_id))].sort_values(
+                by='timestamp', ascending=True)
 
+        self.cols_to_train.remove('timestamp')
         col_indexes = [target_df.columns.get_loc(column) for column in self.cols_to_train]
         col_indexes.sort()
-        x = np.array(target_df.iloc[0:10, col_indexes].values)
-        y = target_df.iloc[0:10, target_df.columns.get_loc("activity")]
-        y = y.apply(lambda row: self.label_to_numeric(row))
-        y = np.array(y.values)
-        return x, to_categorical(y)
+        train_x = []
+        train_y = []
+        for index, rows in target_df.iterrows():
+            train_x.append(rows[col_indexes].values)
+            train_y.append(
+                to_categorical(self.label_to_numeric(rows['activity']), num_classes=self.get_total_categories()))
+
+        return np.asarray(train_x).astype(np.float32), np.asarray(train_y)
 
     def on_epoch_begin(self, epoch, logs={}):
         # pass all the subjects one by with all the activities one by one

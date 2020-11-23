@@ -8,11 +8,11 @@ ROOT_DIRECTORY = os.getcwd()
 
 SENSOR_TO_TRAIN = ['acc', 'ori', 'gyro']
 
-n_timestamps = 10
+n_timestamps = 30
 
 # train the network
-steps_per_epoch = 20
-epochs = 2
+steps_per_epoch = 50
+epochs = 100
 batchsize = steps_per_epoch * epochs
 
 generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt',
@@ -21,13 +21,6 @@ generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt',
                               extract_data_size=n_timestamps,
                               istrain=True,
                               ratio=0.3)
-
-validation_generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt',
-                                         train_for=SENSOR_TO_TRAIN[0],
-                                         batch_size=batchsize,
-                                         extract_data_size=n_timestamps,
-                                         istrain=False,
-                                         ratio=0.3)
 
 n_features = generator.get_features_count()
 n_category = generator.get_total_categories()
@@ -39,20 +32,19 @@ model = MobiFallNet(input_shape=input_shape, n_outputs=n_category).get_model()
 callbacks_list = [
     ModelCheckpoint(os.path.join('model', 'weights.hdf5'), monitor='loss', verbose=1, save_best_only=True, mode='auto',
                     save_weights_only='True'),
-    generator,
-    validation_generator]
+    generator]
 
 history = model.fit_generator(generator.next_train(),
                               steps_per_epoch=steps_per_epoch,
                               epochs=epochs,
                               verbose=1,
                               callbacks=callbacks_list,
-                              validation_data=validation_generator.next_val(),
-                              validation_steps=int((steps_per_epoch // 4)),
+                              validation_data=generator.next_val(),
+                              validation_steps=int((steps_per_epoch // 3)),
                               validation_freq=1,
                               max_queue_size=10,
                               workers=1,
-                              use_multiprocessing=True,
+                              use_multiprocessing=False,
                               shuffle=False,
                               initial_epoch=0)
 
