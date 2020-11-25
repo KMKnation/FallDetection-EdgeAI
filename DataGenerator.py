@@ -43,17 +43,20 @@ class MobiFallGenerator(keras.callbacks.Callback):
         self.istrain = istrain
         self.ratio = ratio
         self._train_for = train_for
-        self._target_subject_id = '1'
+        self._target_subject_id = '2'
         self.batch_size = batch_size
 
         if self._train_for == 'acc':
             self._all_data = pd.DataFrame(columns=self.acc_columns)
+            self._test_data = pd.DataFrame(columns=self.acc_columns)
             self.columns = self.acc_columns
         elif self._train_for == 'ori':
             self._all_data = pd.DataFrame(columns=self.ori_columns)
+            self._test_data = pd.DataFrame(columns=self.ori_columns)
             self.columns = self.ori_columns
         elif self._train_for == 'gyro':
             self._all_data = pd.DataFrame(columns=self.gyro_columns)
+            self._test_data = pd.DataFrame(columns=self.gyro_columns)
             self.columns = self.gyro_columns
 
         self.cols_to_train = [column for column in self.columns if column not in self.common_cols]
@@ -73,6 +76,8 @@ class MobiFallGenerator(keras.callbacks.Callback):
             elif SENSOR_CODE == 'gyro' and self._train_for == 'gyro':
                 self.feed_csv(self.gyro_columns, file, ADL, SUBJECT_ID, TRIAL_NO)
 
+        print('DATA LOADED !!')
+
     def label_to_numeric(self, activity):
         return self.label_map[activity]
 
@@ -81,14 +86,20 @@ class MobiFallGenerator(keras.callbacks.Callback):
         df['activity'] = ADL
         df['subject_id'] = SUBJECT_ID
         df['trial_id'] = TRIAL_NO.split('.')[0]
+        # train test split based on ratio
 
-        self._all_data = self._all_data.append(df, ignore_index=True, sort=True)
+        trainig_upto = int(df.shape[0] * (1 - self.ratio)) - 1
+        self._all_data = self._all_data.append(df.iloc[0:trainig_upto], ignore_index=True, sort=True)
+        testing_from = (df.shape[0] - int(df.shape[0] * self.ratio) - 1)
+        self._test_data = self._test_data.append(df.iloc[testing_from:df.shape[0]], ignore_index=True, sort=True)
 
     def get_data_files(self):
         return self._datafiles
 
     def prepare_data(self, activities, main_df, batchsize):
-        target_activity = activities[random.randint(0, len(activities) - 1)]
+        # target_activity = activities[random.randint(0, len(activities) - 1)]
+        # print(' ACTIVITIES {}'.format(str(main_df['activity'].unique())))
+
         target_df = main_df
         # target_df = main_df[main_df['activity'] == target_activity]
         target_df['activity'] = target_df['activity'].apply(lambda activity: self.label_to_numeric(activity))
@@ -113,14 +124,13 @@ class MobiFallGenerator(keras.callbacks.Callback):
 
             if i == data_size:
                 break
-
             train_x.append(target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size, col_indexes].values)
 
-            #get max vote for this region of timestamp
+            # get max vote for this region of timestamp
             labels = target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size,
-                           target_df.columns.get_loc('activity')].values
+                     target_df.columns.get_loc('activity')].values
             labels = sorted(labels, key=list(labels).count)
-            train_y.append(to_categorical(labels[-1],num_classes=self.get_total_categories()))
+            train_y.append(to_categorical(labels[-1], num_classes=self.get_total_categories()))
 
         while len(train_y) < batchsize:
 
@@ -144,17 +154,16 @@ class MobiFallGenerator(keras.callbacks.Callback):
         # keep in mind that whatever timestamps you pass in one bundle of x
         # the target label for that timestamps should be same
 
+        print(" WE ARE TRAINING FOR SUBJECT ID  {} WITH BATCH_SIZE {}".format(self._target_subject_id, batchsize))
+
+
         # there is 500 timestasmps minumum for each activity
-
-        target_df = self._all_data[(self._all_data['subject_id'] == self._target_subject_id)].sort_values(
-            by=['timestamp', 'subject_id', 'trial_id'], ascending=[True, True, True])
-
-        # train test split based on ratio
         if isTrain:
-            target_df = target_df.iloc[0:int(target_df.shape[0] * (1 - self.ratio)) - 1]
+            target_df = self._all_data[(self._all_data['subject_id'] == self._target_subject_id)].sort_values(
+                by=['timestamp', 'subject_id', 'trial_id'], ascending=[True, True, True])
         else:
-            target_df = target_df.iloc[
-                        (target_df.shape[0] - int(target_df.shape[0] * self.ratio) - 1):target_df.shape[0]]
+            target_df = self._test_data[(self._test_data['subject_id'] == self._target_subject_id)].sort_values(
+                by=['timestamp', 'subject_id', 'trial_id'], ascending=[True, True, True])
 
         # print(target_df.head())
         # print(self.cols_to_train)
@@ -192,7 +201,7 @@ class MobiFallGenerator(keras.callbacks.Callback):
 
     def next_val(self):
         while 1:
-            ret = self.get_batch(self.batch_size, True)
+            ret = self.get_batch(self.batch_size, False)
             yield ret
 
     def get_test_data(self, subject_id=None, batchsize=30):
@@ -245,44 +254,52 @@ class MobiFallGenerator(keras.callbacks.Callback):
 
         return train_x, train_y
 
-    def on_epoch_begin(self, epoch, logs={}):
-        # pass all the subjects one by with all the activities one by one
-        if epoch < 5:
-            self._target_subject_id = '2'
-        elif 5 <= epoch < 10:
-            self._target_subject_id = '1'
-        elif 10 <= epoch < 15:
-            self._target_subject_id = '3'
-        elif 15 <= epoch < 20:
-            self._target_subject_id = '4'
-        elif 20 <= epoch < 25:
-            self._target_subject_id = '5'
-        elif 25 <= epoch < 35:
-            self._target_subject_id = '6'
-        elif 35 <= epoch < 40:
-            self._target_subject_id = '7'
-        elif 40 <= epoch < 42:
-            self._target_subject_id = '7'
-        elif 42 <= epoch < 45:
-            self._target_subject_id = '9'
-        elif 45 <= epoch < 47:
-            self._target_subject_id = '10'
-        elif 47 <= epoch < 50:
-            self._target_subject_id = '11'
-        elif 50 <= epoch < 52:
-            self._target_subject_id = '12'
-        elif 52 <= epoch < 54:
-            self._target_subject_id = '13'
-        elif 54 <= epoch < 60:
-            self._target_subject_id = '14'
-        elif 60 <= epoch < 62:
-            self._target_subject_id = '15'
-        elif 62 <= epoch < 64:
-            self._target_subject_id = '16'
-        elif epoch >= 64:
-            self._target_subject_id = str(self.subjects[random.randint(0, len(self.subjects) - 1)])
 
-        print("WE ARE TRAINING FOR SUBJECT ID = {}".format(self._target_subject_id))
+
+    def on_batch_begin(self, batch, logs=None):
+
+        self._target_subject_id = str(self.subjects[random.randint(0, len(self.subjects) - 1)])
+
+        # # pass all the subjects one by with all the activities one by one
+        # if epoch < 3:
+        #     self._target_subject_id = '2'
+        # elif 3 <= epoch < 5:
+        #     self._target_subject_id = '1'
+        # elif 5 <= epoch < 7:
+        #     self._target_subject_id = '3'
+        # elif 7 <= epoch < 9:
+        #     self._target_subject_id = '4'
+        # elif 9 <= epoch < 11:
+        #     self._target_subject_id = '5'
+        # elif 11 <= epoch < 13:
+        #     self._target_subject_id = '6'
+        # elif 13 <= epoch < 15:
+        #     self._target_subject_id = '7'
+        # elif 15 <= epoch < 17:
+        #     self._target_subject_id = '9'
+        # elif 17 <= epoch < 19:
+        #     self._target_subject_id = '10'
+        # elif 19 <= epoch < 50:
+        #     self._target_subject_id = str(self.subjects[random.randint(0, len(self.subjects) - 1)])
+
+        # elif 50 <= epoch < 52:
+        #     self._target_subject_id = '12'
+        # elif 52 <= epoch < 54:
+        #     self._target_subject_id = '13'
+        # elif 54 <= epoch < 60:
+        #     self._target_subject_id = '14'
+        # elif 60 <= epoch < 62:
+        #     self._target_subject_id = '15'
+        # elif 62 <= epoch < 64:
+        #     self._target_subject_id = '16'
+        # elif epoch >= 64:
+
+        print(" WE ARE TRAINING FOR SUBJECT ID = {}".format(self._target_subject_id))
+
+        return super().on_batch_begin(batch, logs)
+
+    def on_epoch_begin(self, epoch, logs={}):
+        print('')
 
     def get_observations_per_epoch(self):
         return self._extract_data_size

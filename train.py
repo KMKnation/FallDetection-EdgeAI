@@ -12,7 +12,7 @@ n_timestamps = 30
 
 # train the network
 steps_per_epoch = 50
-epochs = 10
+epochs = 50
 batchsize = steps_per_epoch * epochs
 
 generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt',
