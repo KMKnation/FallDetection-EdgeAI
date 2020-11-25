@@ -13,6 +13,7 @@ print(x_train.shape)
 y_train = np.random.random((batch_size, nb_classes))
 
 print(y_train.shape)
+print(y_train[0])
 
 
 label_map = {

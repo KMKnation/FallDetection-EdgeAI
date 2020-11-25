@@ -112,6 +112,6 @@ def draw_flow(test_data, label):
             print('Inference Time', inference_time)
 
 
-x, y = generator.get_test_data(1, batchsize = 400)
+x, y = generator.get_test_data(2, batchsize = 400)
 for i in range(len(x)):
     draw_flow(x[i], y[i])
