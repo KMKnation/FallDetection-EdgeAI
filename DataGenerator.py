@@ -189,31 +189,56 @@ class MobiFallGenerator(keras.callbacks.Callback):
             ret = self.get_batch(self.batch_size, False)
             yield ret
 
-    def get_test_data(self, subject_id = None):
+    def get_test_data(self, subject_id = None, batchsize = 30):
         """
         x shape = [datasize, 3]
         y shape = [data-size ,1]
         :return:
         """
-
-        if subject_id == None:
-            target_df = self._all_data[(self._all_data['subject_id'] == self._target_subject_id)].sort_values(
-                by='timestamp', ascending=True)
-        else:
-            target_df = self._all_data[(self._all_data['subject_id'] == str(subject_id))].sort_values(
-                by='timestamp', ascending=True)
-
-        self.cols_to_train.remove('timestamp')
-        col_indexes = [target_df.columns.get_loc(column) for column in self.cols_to_train]
-        col_indexes.sort()
+        target_df = self._all_data[self._all_data['subject_id'] == str(subject_id)]
+        target_df = target_df.sort_values(
+            by=['timestamp', 'subject_id', 'trial_id'], ascending=[True, True, True])
         train_x = []
         train_y = []
-        for index, rows in target_df.iterrows():
-            train_x.append(rows[col_indexes].values)
-            train_y.append(
-                to_categorical(self.label_to_numeric(rows['activity']), num_classes=self.get_total_categories()))
 
-        return np.asarray(train_x).astype(np.float32), np.asarray(train_y)
+        # print(target_df.head())
+        data_size = target_df.shape[0]
+        # print(data_size)
+
+        if self._extract_data_size > data_size:
+            raise Exception("Not enough data")
+
+        start_pos = [i + self._extract_data_size for i in range(data_size - self._extract_data_size)]
+        self.cols_to_train.remove('timestamp')
+        col_indexes = [target_df.columns.get_loc(column) for column in self.cols_to_train]
+        activity_col_index = target_df.columns.get_loc('activity')
+
+        col_indexes.sort()
+
+
+        for i in range(batchsize):
+            if len(train_y) == batchsize:
+                break
+
+            if i == data_size:
+                 break
+
+            train_x.append(target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size, col_indexes].values)
+            train_y.append(target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size, activity_col_index].values)
+
+        while len(train_y) < batchsize:
+
+            if len(train_y) == batchsize:
+                break
+
+            # print('some how less data for one activity for generating more for same subject')
+            x, y = self.get_test_data( subject_id = None, batchsize = batchsize - len(train_y))
+            for i in range(len(x)):
+                train_x.append(x[i])
+                train_y.append(y[i])
+
+        return train_x, train_y
+
 
     def on_epoch_begin(self, epoch, logs={}):
         # pass all the subjects one by with all the activities one by one

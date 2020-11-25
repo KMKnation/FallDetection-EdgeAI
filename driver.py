@@ -33,7 +33,7 @@ SENSOR_TO_TRAIN = ['acc', 'ori', 'gyro']
 
 n_timestamps = 30
 
-run_step = 1
+run_step = 30
 
 # train the network
 steps_per_epoch = 10
@@ -88,10 +88,10 @@ def draw_flow(test_data, label):
 
         if i < steps:
             # prediction = model.predict(np.array([[test_data]]))  # check input shape {batch size, timestamps, features}
-            prediction = model.predict(np.array([test_data]))  # check input shape {batch size, timestamps, features}
+            prediction = model.predict(np.array([test_data]).astype(np.float32))  # check input shape {batch size, timestamps, features}
 
             # predict = run.run(test_data[i * run_step - timestamps: i * run_step, :])
-            title = 'correct: {}    predict: {}'.format(label_map[np.argmax(label)], label_map[np.argmax(prediction)])
+            title = 'correct: {}    predict: {}'.format(label[i], label_map[np.argmax(prediction)])
 
             # update_show_data(ax, run_step, test_data[i * run_step:i * run_step + run_step, 0])
             # update_show_data(ay, run_step, test_data[i * run_step:i * run_step + run_step, 1])
@@ -112,6 +112,6 @@ def draw_flow(test_data, label):
             print('Inference Time', inference_time)
 
 
-x, y = generator.get_batch(30, True)
+x, y = generator.get_test_data(1, batchsize = 400)
 for i in range(len(x)):
     draw_flow(x[i], y[i])
