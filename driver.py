@@ -25,6 +25,24 @@ label_map = {
     'SDL': 12
 }
 
+
+labels = {
+    'STD': 'Standing',
+    'WAL': 'Walking',
+    'JOG': 'Jogging',
+    'JUM': 'Jumping',
+    'STU': 'Stairs up',
+    'STN': 'Stairs down',
+    'SCH': 'Sit chair',
+    'CSI': 'Car-step in',
+    'CSO': 'Car-step out',
+    'FOL': 'Forward-lying',
+    'FKL': 'Front-knees-lying',
+    'BSC': 'Back-sitting-chair',
+    'SDL': 'Sideward-lying'
+}
+
+
 label_map = list(label_map.keys())
 # ['STD', 'WAL', 'JOG', 'JUM', 'STU', 'STN', 'SCH', 'CSI', 'CSO', 'FOL', 'FKL', 'BSC', 'SDL']
 
@@ -91,7 +109,7 @@ def draw_flow(test_data, label):
             prediction = model.predict(np.array([test_data]).astype(np.float32))  # check input shape {batch size, timestamps, features}
 
             # predict = run.run(test_data[i * run_step - timestamps: i * run_step, :])
-            title = 'correct: {}    predict: {}'.format(label[i], label_map[np.argmax(prediction)])
+            title = 'correct: {}    predict: {}'.format(labels[label[i]], labels[label_map[np.argmax(prediction)]])
 
             # update_show_data(ax, run_step, test_data[i * run_step:i * run_step + run_step, 0])
             # update_show_data(ay, run_step, test_data[i * run_step:i * run_step + run_step, 1])
@@ -112,6 +130,6 @@ def draw_flow(test_data, label):
             print('Inference Time', inference_time)
 
 
-x, y = generator.get_test_data(subject_id=2, activity='WAL', batchsize = 100)
+x, y = generator.get_test_data(subject_id=2, batchsize = 1000)
 for i in range(len(x)):
     draw_flow(x[i], y[i])

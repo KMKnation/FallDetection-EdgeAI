@@ -194,6 +194,7 @@ class MobiFallGenerator(keras.callbacks.Callback):
         activities = target_df['activity'].unique()
 
         train_x, train_y = self.prepare_data(activities, target_df, batchsize)
+
         return (np.array(train_x), np.array(train_y))
 
     def next_train(self):
@@ -206,14 +207,15 @@ class MobiFallGenerator(keras.callbacks.Callback):
             ret = self.get_batch(self.batch_size, False)
             yield ret
 
-    def get_test_data(self, subject_id=None, batchsize=30, activity = '3'):
+    def get_test_data(self, subject_id=None, batchsize=30, activity = None):
         """
         x shape = [datasize, 3]
         y shape = [data-size ,1]
         :return:
         """
         target_df = self._all_data[self._all_data['subject_id'] == str(subject_id)]
-        target_df = target_df[target_df['activity'] == activity]
+        if activity != None:
+           target_df = target_df[target_df['activity'] == activity]
         target_df = target_df.sort_values(
             by=['timestamp', 'subject_id', 'trial_id'], ascending=[True, True, True])
         train_x = []
@@ -250,7 +252,7 @@ class MobiFallGenerator(keras.callbacks.Callback):
                 break
 
             # print('some how less data for one activity for generating more for same subject')
-            x, y = self.get_test_data(subject_id=None, batchsize=batchsize - len(train_y))
+            x, y = self.get_test_data(subject_id=subject_id, batchsize=(batchsize - len(train_y)), activity=activity)
             for i in range(len(x)):
                 train_x.append(x[i])
                 train_y.append(y[i])

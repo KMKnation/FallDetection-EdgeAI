@@ -1,5 +1,5 @@
 from tensorflow.keras.callbacks import ModelCheckpoint
-from model import MobiFallNet
+from model import MobiFallNet, CNNMobiFallNet
 from DataGenerator import MobiFallGenerator
 import matplotlib.pyplot as plt
 import os
@@ -11,10 +11,10 @@ SENSOR_TO_TRAIN = ['acc', 'ori', 'gyro']
 n_timestamps = 150
 
 # train the network
-steps_per_epoch = 40
-epochs = 300
+steps_per_epoch = 300
+epochs = 1500
 # batchsize = steps_per_epoch * epochs
-batchsize = 32
+batchsize = 64
 
 
 generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt',
@@ -31,6 +31,8 @@ input_shape = (n_timestamps, n_features)
 print("INPUT SHAPE =>{}".format(str(input_shape)))
 model = MobiFallNet(input_shape=input_shape, n_outputs=n_category).get_model()
 
+# model = CNNMobiFallNet(n_timestamps, n_features, n_category).get_model()
+
 callbacks_list = [
     ModelCheckpoint(os.path.join('model', 'weights.hdf5'), monitor='loss', verbose=1, save_best_only=True, mode='auto',
                     save_weights_only='True'),
@@ -42,7 +44,7 @@ history = model.fit_generator(generator.next_train(),
                               verbose=1,
                               callbacks=callbacks_list,
                               validation_data=generator.next_val(),
-                              validation_steps=int((steps_per_epoch // 3)),
+                              validation_steps=int((steps_per_epoch // 2)),
                               validation_freq=1,
                               max_queue_size=10,
                               workers=1,
