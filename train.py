@@ -8,12 +8,14 @@ ROOT_DIRECTORY = os.getcwd()
 
 SENSOR_TO_TRAIN = ['acc', 'ori', 'gyro']
 
-n_timestamps = 30
+n_timestamps = 150
 
 # train the network
-steps_per_epoch = 50
-epochs = 50
-batchsize = steps_per_epoch * epochs
+steps_per_epoch = 40
+epochs = 300
+# batchsize = steps_per_epoch * epochs
+batchsize = 32
+
 
 generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt',
                               train_for=SENSOR_TO_TRAIN[0],

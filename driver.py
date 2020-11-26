@@ -31,12 +31,12 @@ label_map = list(label_map.keys())
 
 SENSOR_TO_TRAIN = ['acc', 'ori', 'gyro']
 
-n_timestamps = 30
+n_timestamps = 150
 
-run_step = 30
+run_step = 150
 
 # train the network
-steps_per_epoch = 10
+steps_per_epoch = 20
 epochs = 1
 batchsize = steps_per_epoch * epochs
 
@@ -112,6 +112,6 @@ def draw_flow(test_data, label):
             print('Inference Time', inference_time)
 
 
-x, y = generator.get_test_data(2, batchsize = 400)
+x, y = generator.get_test_data(subject_id=2, activity='WAL', batchsize = 100)
 for i in range(len(x)):
     draw_flow(x[i], y[i])

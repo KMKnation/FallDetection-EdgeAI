@@ -1,6 +1,6 @@
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import LSTM, Dropout, Dense
-from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.optimizers import SGD, Adam
 
 
 class MobiFallNet(object):
@@ -17,8 +17,9 @@ class MobiFallNet(object):
         if pretrained_path != None:
             self.model.load_weights(pretrained_path)
             print('Loading weights from {}'.format(pretrained_path))
-        optimizer = SGD(lr=0.01, nesterov=True)
-        self.model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        # optimizer = SGD(lr=0.01, momentum=0.9, nesterov=True)
+        adam = Adam(lr=0.001)
+        self.model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
 
     def get_model(self):
         print(self.model.summary())

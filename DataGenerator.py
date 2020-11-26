@@ -79,7 +79,11 @@ class MobiFallGenerator(keras.callbacks.Callback):
         print('DATA LOADED !!')
 
     def label_to_numeric(self, activity):
-        return self.label_map[activity]
+        try:
+            return self.label_map[activity]
+        except Exception as err:
+            print(err)
+            return int(activity)
 
     def feed_csv(self, columns, file, ADL, SUBJECT_ID, TRIAL_NO):
         df = pd.read_csv(file, skiprows=16, names=columns)
@@ -100,7 +104,7 @@ class MobiFallGenerator(keras.callbacks.Callback):
         # target_activity = activities[random.randint(0, len(activities) - 1)]
         # print(' ACTIVITIES {}'.format(str(main_df['activity'].unique())))
 
-        target_df = main_df
+        target_df = main_df.copy()
         # target_df = main_df[main_df['activity'] == target_activity]
         target_df['activity'] = target_df['activity'].apply(lambda activity: self.label_to_numeric(activity))
 
@@ -154,8 +158,6 @@ class MobiFallGenerator(keras.callbacks.Callback):
         # keep in mind that whatever timestamps you pass in one bundle of x
         # the target label for that timestamps should be same
 
-        print(" WE ARE TRAINING FOR SUBJECT ID  {} WITH BATCH_SIZE {}".format(self._target_subject_id, batchsize))
-
 
         # there is 500 timestasmps minumum for each activity
         if isTrain:
@@ -204,13 +206,14 @@ class MobiFallGenerator(keras.callbacks.Callback):
             ret = self.get_batch(self.batch_size, False)
             yield ret
 
-    def get_test_data(self, subject_id=None, batchsize=30):
+    def get_test_data(self, subject_id=None, batchsize=30, activity = '3'):
         """
         x shape = [datasize, 3]
         y shape = [data-size ,1]
         :return:
         """
         target_df = self._all_data[self._all_data['subject_id'] == str(subject_id)]
+        target_df = target_df[target_df['activity'] == activity]
         target_df = target_df.sort_values(
             by=['timestamp', 'subject_id', 'trial_id'], ascending=[True, True, True])
         train_x = []
