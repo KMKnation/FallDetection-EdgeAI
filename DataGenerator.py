@@ -207,7 +207,7 @@ class MobiFallGenerator(keras.callbacks.Callback):
             ret = self.get_batch(self.batch_size, False)
             yield ret
 
-    def get_test_data(self, subject_id=None, batchsize=30, activity = None):
+    def get_test_data(self, subject_id=None, activity = None):
         """
         x shape = [datasize, 3]
         y shape = [data-size ,1]
@@ -228,15 +228,15 @@ class MobiFallGenerator(keras.callbacks.Callback):
         if self._extract_data_size > data_size:
             raise Exception("Not enough data")
 
-        start_pos = [i + self._extract_data_size for i in range(data_size - self._extract_data_size)]
+        start_pos = [i for i in range(0, data_size - self._extract_data_size, self._extract_data_size )]
         self.cols_to_train.remove('timestamp')
         col_indexes = [target_df.columns.get_loc(column) for column in self.cols_to_train]
         activity_col_index = target_df.columns.get_loc('activity')
 
         col_indexes.sort()
 
-        for i in range(batchsize):
-            if len(train_y) == batchsize:
+        for i in range(len(start_pos)):
+            if len(train_y) == len(start_pos):
                 break
 
             if i == data_size:
@@ -246,13 +246,13 @@ class MobiFallGenerator(keras.callbacks.Callback):
             train_y.append(
                 target_df.iloc[start_pos[i]:start_pos[i] + self._extract_data_size, activity_col_index].values)
 
-        while len(train_y) < batchsize:
+        while len(train_y) < len(start_pos):
 
-            if len(train_y) == batchsize:
+            if len(train_y) == len(start_pos):
                 break
 
             # print('some how less data for one activity for generating more for same subject')
-            x, y = self.get_test_data(subject_id=subject_id, batchsize=(batchsize - len(train_y)), activity=activity)
+            x, y = self.get_test_data(subject_id=subject_id, batchsize=(len(start_pos) - len(train_y)), activity=activity)
             for i in range(len(x)):
                 train_x.append(x[i])
                 train_y.append(y[i])

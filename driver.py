@@ -25,7 +25,6 @@ label_map = {
     'SDL': 12
 }
 
-
 labels = {
     'STD': 'Standing',
     'WAL': 'Walking',
@@ -42,7 +41,6 @@ labels = {
     'SDL': 'Sideward-lying'
 }
 
-
 label_map = list(label_map.keys())
 # ['STD', 'WAL', 'JOG', 'JUM', 'STU', 'STN', 'SCH', 'CSI', 'CSO', 'FOL', 'FKL', 'BSC', 'SDL']
 
@@ -51,7 +49,12 @@ SENSOR_TO_TRAIN = ['acc', 'ori', 'gyro']
 
 n_timestamps = 150
 
-run_step = 150
+run_step = 2
+
+x = [_ for _ in range(n_timestamps)]
+ax = [0 for _ in range(n_timestamps)]
+ay = [0 for _ in range(n_timestamps)]
+az = [0 for _ in range(n_timestamps)]
 
 # train the network
 steps_per_epoch = 20
@@ -88,10 +91,7 @@ def update_show_data(data, step, update_data):
 
 
 def draw_flow(test_data, label):
-    x = [_ for _ in range(n_timestamps)]
-    ax = [0 for _ in range(n_timestamps)]
-    ay = [0 for _ in range(n_timestamps)]
-    az = [0 for _ in range(n_timestamps)]
+
 
     start_time = time.time()
 
@@ -102,12 +102,13 @@ def draw_flow(test_data, label):
 
     steps = int(n_timestamps / run_step)
 
+    # prediction = model.predict(np.array([[test_data]]))  # check input shape {batch size, timestamps, features}
+    prediction = model.predict(
+        np.array([test_data]).astype(np.float32))  # check input shape {batch size, timestamps, features}
+
     for i in range(steps):
 
         if i < steps:
-            # prediction = model.predict(np.array([[test_data]]))  # check input shape {batch size, timestamps, features}
-            prediction = model.predict(np.array([test_data]).astype(np.float32))  # check input shape {batch size, timestamps, features}
-
             # predict = run.run(test_data[i * run_step - timestamps: i * run_step, :])
             title = 'correct: {}    predict: {}'.format(labels[label[i]], labels[label_map[np.argmax(prediction)]])
 
@@ -130,6 +131,7 @@ def draw_flow(test_data, label):
             print('Inference Time', inference_time)
 
 
-x, y = generator.get_test_data(subject_id=2, batchsize = 2000)
-for i in range(len(x)):
-    draw_flow(x[i], y[i])
+x_features, y_labels = generator.get_test_data(subject_id=2)
+
+for i in range(len(x_features)):
+    draw_flow(x_features[i], y_labels[i])
