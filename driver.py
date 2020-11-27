@@ -1,8 +1,7 @@
 import time
 import numpy as np
 from matplotlib import pyplot as plt
-from model import MobiFallNet
-
+from send_mail import SendMail
 from model import MobiFallNet
 from DataGenerator import MobiFallGenerator
 import os
@@ -76,6 +75,7 @@ print("INPUT SHAPE =>{}".format(str(input_shape)))
 
 weights = os.path.join(os.path.join(ROOT_DIRECTORY, 'model'), 'weights.hdf5')
 model = MobiFallNet(input_shape=input_shape, n_outputs=n_category, pretrained_path=weights).get_model()
+mailer = SendMail()
 
 
 # batch_size = 30
@@ -90,9 +90,21 @@ def update_show_data(data, step, update_data):
         data.append(update_data[i])
 
 
-def draw_flow(test_data, label):
+lastfall = None
 
 
+def getFallDescription(type):
+    if type == 'FOL':
+        return 'Fall Forward from standing, use of hands to dampen fall'
+    elif type == 'FKL':
+        return 'Fall forward from standing, first impact on knees '
+    elif type == 'BSC':
+        return 'Fall backward while trying to sit on a chair'
+    elif type == 'SDL':
+        return 'Fall sidewards from standing, bending legs'
+
+
+def draw_flow(test_data, label, lastfall=None):
     start_time = time.time()
 
     plt.axis([0, 151, -20, 20])
@@ -106,11 +118,21 @@ def draw_flow(test_data, label):
     prediction = model.predict(
         np.array([test_data]).astype(np.float32))  # check input shape {batch size, timestamps, features}
 
+    prediction = label_map[np.argmax(prediction)]
+    if (prediction in ['BSC', 'FKL', 'FOL', 'SDL']):
+        if lastfall != prediction:
+            lastfall = prediction
+            body = 'Description : {}'.format(getFallDescription(lastfall))
+            fall = labels[prediction]
+            mailer.send_alert(body, fall)
+    else:
+        lastfall = None
+
     for i in range(steps):
 
         if i < steps:
             # predict = run.run(test_data[i * run_step - timestamps: i * run_step, :])
-            title = 'correct: {}    predict: {}'.format(labels[label[i]], labels[label_map[np.argmax(prediction)]])
+            title = 'correct: {}    predict: {}'.format(labels[label[i]], labels[prediction])
 
             # update_show_data(ax, run_step, test_data[i * run_step:i * run_step + run_step, 0])
             # update_show_data(ay, run_step, test_data[i * run_step:i * run_step + run_step, 1])
@@ -130,8 +152,10 @@ def draw_flow(test_data, label):
             inference_time = str(time.time() - start_time)
             print('Inference Time', inference_time)
 
+    return lastfall
+
 
 x_features, y_labels = generator.get_test_data(subject_id=2)
 
 for i in range(len(x_features)):
-    draw_flow(x_features[i], y_labels[i])
+    lastfall = draw_flow(x_features[i], y_labels[i], lastfall)
