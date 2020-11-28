@@ -1,3 +1,4 @@
+import getpass
 import time
 import numpy as np
 from matplotlib import pyplot as plt
@@ -5,7 +6,11 @@ from send_mail import SendMail
 from model import MobiFallNet
 from DataGenerator import MobiFallGenerator
 import os
+sender = input("Type email address from which you want to send alerts: ")
+password =  getpass.getpass('Password:')
+receiver = input("Type email address of whom you want to send alerts: ")
 
+mailer = SendMail(sender, password, receivers=[receiver])
 ROOT_DIRECTORY = os.getcwd()
 
 label_map = {
@@ -75,7 +80,7 @@ print("INPUT SHAPE =>{}".format(str(input_shape)))
 
 weights = os.path.join(os.path.join(ROOT_DIRECTORY, 'model'), 'weights.hdf5')
 model = MobiFallNet(input_shape=input_shape, n_outputs=n_category, pretrained_path=weights).get_model()
-mailer = SendMail()
+
 
 
 # batch_size = 30
@@ -119,12 +124,13 @@ def draw_flow(test_data, label, lastfall=None):
         np.array([test_data]).astype(np.float32))  # check input shape {batch size, timestamps, features}
 
     prediction = label_map[np.argmax(prediction)]
-    if (prediction in ['BSC', 'FKL', 'FOL', 'SDL']):
+-    if (prediction in ['BSC', 'FKL', 'FOL', 'SDL']):
         if lastfall != prediction:
             lastfall = prediction
             body = 'Description : {}'.format(getFallDescription(lastfall))
             fall = labels[prediction]
             mailer.send_alert(body, fall)
+            print('Alert sent {}'.format(body))
     else:
         lastfall = None
 
