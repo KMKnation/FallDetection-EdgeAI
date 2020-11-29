@@ -6,8 +6,9 @@ from send_mail import SendMail
 from model import MobiFallNet
 from DataGenerator import MobiFallGenerator
 import os
+
 sender = input("Type email address from which you want to send alerts: ")
-password =  getpass.getpass('Password:')
+password = getpass.getpass('Password:')
 receiver = input("Type email address of whom you want to send alerts: ")
 
 mailer = SendMail(sender, password, receivers=[receiver])
@@ -82,7 +83,6 @@ weights = os.path.join(os.path.join(ROOT_DIRECTORY, 'model'), 'weights.hdf5')
 model = MobiFallNet(input_shape=input_shape, n_outputs=n_category, pretrained_path=weights).get_model()
 
 
-
 # batch_size = 30
 # datadim = 4
 # nb_classes = 13
@@ -109,7 +109,7 @@ def getFallDescription(type):
         return 'Fall sidewards from standing, bending legs'
 
 
-def draw_flow(test_data, label, lastfall=None):
+def draw_flow(cols, test_data, label, lastfall=None):
     start_time = time.time()
 
     plt.axis([0, 151, -20, 20])
@@ -124,7 +124,7 @@ def draw_flow(test_data, label, lastfall=None):
         np.array([test_data]).astype(np.float32))  # check input shape {batch size, timestamps, features}
 
     prediction = label_map[np.argmax(prediction)]
--    if (prediction in ['BSC', 'FKL', 'FOL', 'SDL']):
+    if (prediction in ['BSC', 'FKL', 'FOL', 'SDL']):
         if lastfall != prediction:
             lastfall = prediction
             body = 'Description : {}'.format(getFallDescription(lastfall))
@@ -148,9 +148,10 @@ def draw_flow(test_data, label, lastfall=None):
             update_show_data(az, run_step, test_data[i * run_step:i * run_step + run_step, 2])
 
             plt.cla()
-            plt.plot(x, ax)
-            plt.plot(x, ay)
-            plt.plot(x, az)
+            plt.plot(x, ax, label='{}'.format(cols[0]))
+            plt.plot(x, ay, label='{}'.format(cols[1]))
+            plt.plot(x, az, label='{}'.format(cols[2]))
+            plt.legend()
 
             plt.title(title)
             plt.draw()
@@ -161,7 +162,7 @@ def draw_flow(test_data, label, lastfall=None):
     return lastfall
 
 
-x_features, y_labels = generator.get_test_data(subject_id=2)
+x_features, y_labels, cols = generator.get_test_data(subject_id=2)
 
 for i in range(len(x_features)):
-    lastfall = draw_flow(x_features[i], y_labels[i], lastfall)
+    lastfall = draw_flow(cols, x_features[i], y_labels[i], lastfall)

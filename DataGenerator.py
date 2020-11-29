@@ -252,12 +252,12 @@ class MobiFallGenerator(keras.callbacks.Callback):
                 break
 
             # print('some how less data for one activity for generating more for same subject')
-            x, y = self.get_test_data(subject_id=subject_id, batchsize=(len(start_pos) - len(train_y)), activity=activity)
+            x, y,_ = self.get_test_data(subject_id=subject_id, activity=activity)
             for i in range(len(x)):
                 train_x.append(x[i])
                 train_y.append(y[i])
 
-        return train_x, train_y
+        return train_x, train_y, self.cols_to_train
 
 
 
