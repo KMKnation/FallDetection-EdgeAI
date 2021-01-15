@@ -2,8 +2,8 @@ import numpy as np
 
 from model import MobiFallNet
 
-batch_size = 10
-timesteps = 1
+batch_size = 64
+timesteps = 150
 datadim = 3
 nb_classes = 13
 x_train = np.random.random((batch_size, timesteps, datadim))

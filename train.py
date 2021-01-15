@@ -11,18 +11,18 @@ SENSOR_TO_TRAIN = ['acc', 'ori', 'gyro']
 n_timestamps = 150
 
 # train the network
-steps_per_epoch = 300
-epochs = 1500
+steps_per_epoch = 1000
+epochs = 300
 # batchsize = steps_per_epoch * epochs
 batchsize = 64
 
 
 generator = MobiFallGenerator('./dataset/*/*/*/*/*.txt',
-                              train_for=SENSOR_TO_TRAIN[0],
+                              train_for=SENSOR_TO_TRAIN[1],
                               batch_size=batchsize,
                               extract_data_size=n_timestamps,
                               istrain=True,
-                              ratio=0.3)
+                              ratio=0.2)
 
 n_features = generator.get_features_count()
 n_category = generator.get_total_categories()
@@ -38,13 +38,14 @@ callbacks_list = [
                     save_weights_only='True'),
     generator]
 
+
 history = model.fit_generator(generator.next_train(),
                               steps_per_epoch=steps_per_epoch,
                               epochs=epochs,
                               verbose=1,
                               callbacks=callbacks_list,
                               validation_data=generator.next_val(),
-                              validation_steps=int((steps_per_epoch // 2)),
+                              validation_steps=int((steps_per_epoch // 3)),
                               validation_freq=1,
                               max_queue_size=10,
                               workers=1,
