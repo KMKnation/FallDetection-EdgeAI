@@ -7,7 +7,7 @@
 *.rar
 
 # dataset
-
+dataset/MobiFall_Dataset_v2.0/
 *./dataset/*.txt
 ./dataset
 ./dataset/MobiFall_Dataset_v2.0.rar
